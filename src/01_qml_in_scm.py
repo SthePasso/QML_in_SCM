@@ -19,7 +19,7 @@ Original file is located at
 # !pip install qiskit_ibm_runtime
 
 from pathlib import Path
-import tensorflow as tf
+#import tensorflow as tf
 import numpy as np
 import pandas as pd
 import re
@@ -71,18 +71,18 @@ np.random.seed(42)
 [ClaMp](https://www.kaggle.com/code/ssmohanty/dimensionality-reduction-techniques)
 """
 
-# import kagglehub
+#import kagglehub
 
-# # Download latest version
-# path = kagglehub.dataset_download("saurabhshahane/classification-of-malwares")
+## Download latest version
+#path = kagglehub.dataset_download("saurabhshahane/classification-of-malwares")
 
-# print("Path to dataset files:", path)
+#print("Path to dataset files:", path)
 
 import pandas as pd
 import os
 
 # Define the dataset path
-dataset_path = "/Users/sthefaniepasso/.cache/kagglehub/datasets/saurabhshahane/classification-of-malwares/versions/1"
+dataset_path = "/home/ats852/.cache/kagglehub/datasets/saurabhshahane/classification-of-malwares/versions/1"
 
 # List files in the directory to find the CSV file
 files = os.listdir(dataset_path)
@@ -137,30 +137,30 @@ print(df_n.shape)
 print(df.isna().sum())
 
 #df.dropna(axis=1, inplace=True)
-df_cleaned = df.dropna(axis=1)
-print(df.isna().sum())
+df_clean = df.dropna(axis=1)
+#print(df.isna().sum())
 
-y = df[target]
-X = df.drop(columns=[target])
-correlation_matrix = df.corr()
+y = df_clean[target]
+X = df_clean.drop(columns=[target])
+#correlation_matrix = df_clean.corr()
 
-print("X shape = ", X.shape)
-print("Y shape = ", y.shape)
-y.value_counts()
+#print("X shape = ", X.shape)
+#print("Y shape = ", y.shape)
+#y.value_counts()
 
 # Plot the correlation matrix using seaborn
-plt.figure(figsize=(15, 8))
-sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
-plt.title('Correlation Matrix')
-plt.show()
+#plt.figure(figsize=(15, 8))
+#sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
+#plt.title('Correlation Matrix')
+#plt.show()
 
-class_correlations = correlation_matrix[target].sort_values(ascending=False)
-all_list_atributs = correlation_matrix[target].sort_values(ascending=False).index.tolist()
-list_atributs = all_list_atributs[1:]
+#class_correlations = correlation_matrix[target].sort_values(ascending=False)
+#all_list_atributs = correlation_matrix[target].sort_values(ascending=False).index.tolist()
+#list_atributs = all_list_atributs[1:]
 
 # Display the sorted correlations
-print(class_correlations)
-print(list_atributs)
+#print(class_correlations)
+#print(list_atributs)
 
 class ClaMPDataset(): # 4 features -> most corelated atributs
   def __init__(self, target, cut = 0):
@@ -197,8 +197,7 @@ class ClaMPDataset(): # 4 features -> most corelated atributs
 
   def read_csv(self, cut):
     # Define the dataset path
-    dataset_path = "/Users/sthefaniepasso/.cache/kagglehub/datasets/saurabhshahane/classification-of-malwares/versions/1"
-
+    dataset_path = "/home/ats852/.cache/kagglehub/datasets/saurabhshahane/classification-of-malwares/versions/1"
     # List files in the directory to find the CSV file
     files = os.listdir(dataset_path)
     csv_files = [f for f in files if f.endswith('.csv')]
@@ -214,6 +213,7 @@ class ClaMPDataset(): # 4 features -> most corelated atributs
     df = self.create_cut(df, cut)
     y = df[self.target]
     X = df.drop(columns=[self.target])
+    X = X.apply(pd.to_numeric,errors='coerce')
     correlation_matrix = X.corr()
     return X,y,correlation_matrix
 
@@ -279,7 +279,7 @@ class ClaMPDatasetGPT(): # 4 features -> most and least correlated atributs
 
     def read_csv(self, cut):
         # Define the dataset path
-        dataset_path = "/Users/sthefaniepasso/.cache/kagglehub/datasets/saurabhshahane/classification-of-malwares/versions/1"
+        dataset_path = "/home/ats852/.cache/kagglehub/datasets/saurabhshahane/classification-of-malwares/versions/1"
 
         # List files in the directory to find the CSV file
         files = os.listdir(dataset_path)
@@ -301,7 +301,7 @@ class ClaMPDatasetGPT(): # 4 features -> most and least correlated atributs
         # Separate features and target
         y = df[self.target]
         X = df.drop(columns=[self.target])
-
+        X = X.dropna()
         # Calculate the correlation matrix
         correlation_matrix = X.corr()
 
@@ -780,7 +780,7 @@ def main_svc_qkernel_correlation(dataset=0, computers="ibm_brisbane"):
     return df_results
 
 """### SVC + Quantum Kernel"""
-
+#need to add a loop here
 df_result_qkernel0 = main_svc_qkernel_correlation(0)
 #df_result_qkernel
 print("**********************************************")

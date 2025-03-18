@@ -1,0 +1,3 @@
+Hardware,Dimension,TP,TN,FP,FN,Accuracy,Precision,Sensitivity,Specificity,F1 Score,Elapsed Time (s),Usage (s),Estimated Usage (s),Num Qubits,Median T1,Median T2,Median Read Out Error
+,2.0,6.0,46.0,0.0,48.0,0.52,1.0,0.1111111111111111,1.0,0.19999999999999998,160.46761107444763,160.46761107444763,,,,,
+,3.0,6.0,46.0,0.0,48.0,0.52,1.0,0.1111111111111111,1.0,0.19999999999999998,292.4773473739624,292.4773473739624,,,,,
