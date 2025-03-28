@@ -142,30 +142,13 @@ df_clean = df.dropna(axis=1)
 
 y = df_clean[target]
 X = df_clean.drop(columns=[target])
-#correlation_matrix = df_clean.corr()
 
-#print("X shape = ", X.shape)
-#print("Y shape = ", y.shape)
-#y.value_counts()
-
-# Plot the correlation matrix using seaborn
-#plt.figure(figsize=(15, 8))
-#sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
-#plt.title('Correlation Matrix')
-#plt.show()
-
-#class_correlations = correlation_matrix[target].sort_values(ascending=False)
-#all_list_atributs = correlation_matrix[target].sort_values(ascending=False).index.tolist()
-#list_atributs = all_list_atributs[1:]
-
-# Display the sorted correlations
-#print(class_correlations)
-#print(list_atributs)
 
 class ClaMPDataset(): # 4 features -> most corelated atributs
   def __init__(self, target, cut = 0):
     self.target = target
     self.X, self.y, self.correlation_matrix = self.read_csv(cut)
+    #print("X:", self.X.shape)
     self.list_atributs = self.list_atributs_corralation()
 
   def list_atributs_corralation(self):
@@ -229,7 +212,7 @@ class ClaMPDataset(): # 4 features -> most corelated atributs
     if cut % 2 == 0:
         df_n = pd.concat([class_0[:cut//2], class_1[:cut//2]])
     else:
-        df_n = pd.concat([class_0[cut//2:], class_1[cut//2:]])
+        df_n = pd.concat([class_0[:(cut//2)+1], class_1[:cut//2]])
 
     return df_n
 
@@ -294,7 +277,6 @@ class ClaMPDatasetGPT(): # 4 features -> most and least correlated atributs
 
         # Drop columns with NaN values
         df = df.dropna(axis=1)
-
         # Apply the cut if specified
         df = self.create_cut(df, cut)
 
@@ -319,8 +301,8 @@ class ClaMPDatasetGPT(): # 4 features -> most and least correlated atributs
         if cut % 2 == 0:
             df_n = pd.concat([class_0[:cut//2], class_1[:cut//2]])
         else:
-            df_n = pd.concat([class_0[cut//2:], class_1[cut//2:]])
-
+            df_n = pd.concat([class_0[:(cut//2)+1], class_1[:cut//2]])
+        
         return df_n
 
     def plot_correlation_matrix(self):
@@ -547,6 +529,15 @@ def metrics_of_evaluation_classicaly(svc,dimension,end,start,test_features, test
   })
   return df_results
 
+def should_skip_execution(results_file, samples, start_at):
+    if os.path.exists(results_file):
+        df_existing = pd.read_csv(results_file)
+        # If there are existing records with the same sample count and dimensions greater than or equal to start_at, return True
+        if ((df_existing["Samples"] == samples) & (df_existing["Dimension"] >= start_at)).any():
+            return True
+    
+    return False
+
 """# QSVM"""
 
 def qsvc_with_ibm_hardware(name, X_train, y_train, X_test, y_test, dimension, service):
@@ -588,121 +579,90 @@ def qsvc_with_ibm_hardware(name, X_train, y_train, X_test, y_test, dimension, se
   #print(f"Callable kernel classification test score: {score}")
   return qsvc, backend
 
-def main_qsvc_update_correlation(computers='all', start_at=0, end_at=20, dataset=0):
-    df_results = inicial_df()
-    if dataset == 0:
-        malware = ClaMPDataset(target='class', cut=500)
+def main_qsvc_update_correlation(computers='all', dataset=0, samples=500, start_at=0, end_at=20):
+    if dataset == 0:        
         results_file = "qsvc_results_correlation_10_10.csv"
-    else:
-        malware = ClaMPDatasetGPT(target='class', cut=500)
+        if should_skip_execution(results_file, samples, end_at):
+            return True
+        malware = ClaMPDataset(target='class', cut=samples)
+    elif dataset == 1:
         results_file = "qsvc_results_correlation_10_0.csv"
+        if should_skip_execution(results_file, samples, end_at):
+            return True
+        malware = ClaMPDatasetGPT(target='class', cut=samples)
+    else:
+        return True
 
     if computers != 'all':
         _, service = backends()
-        q_hardwares = [computers, computers]
+        q_hardwares = [computers]
     else:
         q_hardwares, service = backends()
 
-    print("QSVM with high high correlation: ")
-    # Check if the file exists, if so, load existing data
-    if os.path.exists(results_file):
-        df_results = pd.read_csv(results_file)
-    #print("here")
-    for dimension in range(start_at, end_at):  # having samples > 10 will make kernel crash (December 2024)
-        X_train, X_test, y_train, y_test = malware.dataset(dimension)
-        print("Shape: ", X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+    print("QSVM with high correlation features:")
+    
+    # **Check if the CSV already exists**
+    file_exists = os.path.exists(results_file)
 
-        for i in range(0, len(q_hardwares) - 1):
-            q_hardware = q_hardwares[i]
-            start = time.time()
-            qsvc, backend = qsvc_with_ibm_hardware(q_hardware, X_train, y_train, X_test, y_test, dimension, service)
-            df_model = metrics_of_evaluation(q_hardware, dimension, qsvc, time.time(), start, X_test, y_test, backend)
+    for dimension in range(start_at, end_at):
+        if should_skip_execution(results_file, samples, dimension) == False:
+            X_train, X_test, y_train, y_test = malware.dataset(dimension)
+            print("Shape: ", X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
-            df_results = pd.concat([df_results, df_model], ignore_index=True)
+            for q_hardware in q_hardwares:
+                start = time.time()
+                qsvc, backend = qsvc_with_ibm_hardware(q_hardware, X_train, y_train, X_test, y_test, dimension, service)
 
-            # Save updated results to CSV
-            df_results.to_csv(results_file, index=False)
+                df_model = metrics_of_evaluation(q_hardware, dimension, qsvc, time.time(), start, X_test, y_test, backend)
+                df_model["Samples"] = samples  # Add sample size info
+                # **Append new results while keeping existing content**
+                df_model.to_csv(results_file, mode='a', index=False, header=not file_exists)
 
-            # Print the last updated row
-            #print("Last Updated Row:\n", df_results.iloc[-1])
+                # **Ensure the header is written only once**
+                file_exists = True  
 
-    return df_results
+    return True
 
-# def main_qsvc_update_correlation_10_0(computers='all', start_at=0, end_at=20):
-#     df_results = inicial_df()
-#     malware = ClaMPDatasetGPT(target='class', cut=500)
-
-#     if computers != 'all':
-#         _, service = backends()
-#         q_hardwares = [computers, computers]
-#     else:
-#         q_hardwares, service = backends()
-
-#     results_file = "qsvc_results_correlation_10_0.csv"
-
-#     # Check if the file exists, if so, load existing data
-#     if os.path.exists(results_file):
-#         df_results = pd.read_csv(results_file)
-
-#     for dimension in range(start_at, end_at):  # having samples > 10 will make kernel crash (December 2024)
-#         X_train, X_test, y_train, y_test = malware.dataset(dimension)
-#         print("Shape: ", X_train.shape, X_test.shape, y_train.shape, y_test.shape)
-
-#         for i in range(0, len(q_hardwares) - 1):
-#             q_hardware = q_hardwares[i]
-#             start = time.time()
-#             qsvc, backend = qsvc_with_ibm_hardware(q_hardware, X_train, y_train, X_test, y_test, dimension, service)
-#             df_model = metrics_of_evaluation(q_hardware, dimension, qsvc, time.time(), start, X_test, y_test, backend)
-
-#             df_results = pd.concat([df_results, df_model], ignore_index=True)
-
-#             # Save updated results to CSV
-#             df_results.to_csv(results_file, index=False)
-
-#             # Print the last updated row
-#             #print("Last Updated Row:\n", df_results.iloc[-1])
-
-#     return df_results
+""" # SVC """
 
 from sklearn.pipeline import make_pipeline
 
-def main_svc_correlation(dataset=0):
-  df_results = inicial_df()
-  if dataset == 0:
-    malware = ClaMPDataset(target='class', cut=500)
-    results_file = "svc_results_correlation_10_10.csv"
-  else:
-    malware = ClaMPDatasetGPT(target='class', cut=500)
-    results_file = "svc_results_correlation_10_0.csv"
-  for dimension in range(1,27):
-    X_train, X_test, y_train, y_test = malware.dataset(dimension)
-    print("Shape: ", X_train.shape, X_test.shape, y_train.shape, y_test.shape)
-    start = time.time()
-    svc = make_pipeline(StandardScaler(), SVC(gamma='auto'))
-    svc.fit(X_train, y_train)
-    df_model = metrics_of_evaluation_classicaly(svc,dimension,time.time(),start,X_test, y_test)
+def main_svc_correlation(dataset=0, samples=500, start_at=2, end_at=20):
+    if dataset == 0:
+        results_file = "svc_results_correlation_10_10.csv"
+        if should_skip_execution(results_file, samples, end_at):
+            return True
+        malware = ClaMPDataset(target='class', cut=samples)
+    else:
+        results_file = "svc_results_correlation_10_0.csv"
+        if should_skip_execution(results_file, samples, end_at):
+            return True
+        malware = ClaMPDatasetGPT(target='class', cut=samples)
 
-    df_results = pd.concat([df_results,df_model], ignore_index=True)
-    # print(df_results)
-    df_results.to_csv(results_file, index=False)
-  return df_results
+    # **Check if the CSV file already exists**
+    file_exists = os.path.exists(results_file)
 
-# def main_svc_correlation_10_0():
-#   df_results = inicial_df()
-#   malware = ClaMPDatasetGPT(target='class', cut=500)
-#   results_file = "svc_results_correlation_10_0.csv"
-#   for dimension in range(1,27):
-#     X_train, X_test, y_train, y_test = malware.dataset(dimension)
-#     print("Shape: ", X_train.shape, X_test.shape, y_train.shape, y_test.shape)
-#     start = time.time()
-#     svc = make_pipeline(StandardScaler(), SVC(gamma='auto'))
-#     svc.fit(X_train, y_train)
-#     df_model = metrics_of_evaluation_classicaly(svc,dimension,time.time(),start,X_test, y_test)
+    for dimension in range(start_at, end_at):
+        if should_skip_execution(results_file, samples, dimension) == False:
+            X_train, X_test, y_train, y_test = malware.dataset(dimension)
+            print("Shape: ", X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
-#     df_results = pd.concat([df_results,df_model], ignore_index=True)
-#     # print(df_results)
-#     df_results.to_csv(results_file, index=False)
-#   return df_results
+            start = time.time()
+            svc = make_pipeline(StandardScaler(), SVC(gamma='auto'))
+            svc.fit(X_train, y_train)
+
+            df_model = metrics_of_evaluation_classicaly(svc, dimension, time.time(), start, X_test, y_test)
+            df_model["Samples"] = samples  # Add sample size info
+
+            # **Append ONLY new results to CSV**
+            df_model.to_csv(results_file, mode='a', index=False, header=not file_exists)
+
+            # **Update file_exists to True to prevent rewriting the header**
+            file_exists = True  
+
+    return True
+
+""" # SVC + Qkernel"""
 
 def svc_qkernel(name, X_train, y_train, X_test, y_test, dimension, service):
     backend = service.backend(name)
@@ -723,10 +683,6 @@ def svc_qkernel(name, X_train, y_train, X_test, y_test, dimension, service):
     X_matrix_train = quantum_kernel.evaluate(x_vec=X_train)
     X_matrix_test = quantum_kernel.evaluate(x_vec=X_test, y_vec=X_train)
 
-    # # Ensure y_train is 1D
-    # if y_train.ndim > 1:
-    #     y_train = y_train.flatten()  # Flatten y_train to make it 1D
-
     # SVC model with precomputed kernel
     svc_qkernel_model = SVC(kernel="precomputed")
     print("Kernel shape:", X_matrix_train.shape)
@@ -738,14 +694,19 @@ def svc_qkernel(name, X_train, y_train, X_test, y_test, dimension, service):
 
     return svc_qkernel_model, backend, quantum_kernel, X_matrix_test
 
-def main_svc_qkernel_correlation(dataset=0, computers="ibm_brisbane"):
-    df_results = inicial_df()
+def main_svc_qkernel_correlation(dataset=0, samples=500, computers="ibm_brisbane", start_at=2, end_at=28):
     if dataset == 0:
-        malware = ClaMPDataset(target='class', cut=500)
         results_file = "svc_qkernel_results_correlation_10_10.csv"
-    else:
-        malware = ClaMPDatasetGPT(target='class', cut=500)
+        if should_skip_execution(results_file, samples, end_at):
+            return True
+        malware = ClaMPDataset(target='class', cut=samples)
+    elif dataset == 1:
         results_file = "svc_qkernel_results_correlation_10_0.csv"
+        if should_skip_execution(results_file, samples, end_at):
+            return True
+        malware = ClaMPDatasetGPT(target='class', cut=samples)
+    else:
+        return 0
 
     if computers != 'all':
         _, service = backends()
@@ -753,108 +714,48 @@ def main_svc_qkernel_correlation(dataset=0, computers="ibm_brisbane"):
     else:
         q_hardwares, service = backends()
 
-    for dimension in range(2, 27):
-        X_train, X_test, y_train, y_test = malware.dataset(dimension)
-        print("Shape: ", X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+    # **Check if the CSV file exists to manage header inclusion**
+    file_exists = os.path.exists(results_file)
 
-        # # Ensure y_train and y_test are 1D
-        # if y_train.ndim > 1:
-        #     y_train = y_train.flatten()
-        # if y_test.ndim > 1:
-        #     y_test = y_test.flatten()
+    for dimension in range(start_at, end_at):
+        if should_skip_execution(results_file, samples, dimension) == False:
+            X_train, X_test, y_train, y_test = malware.dataset(dimension)
+            print("Shape: ", X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
-        start = time.time()
-        svc, backend, quantum_kernel, X_matrix_test = svc_qkernel(computers, X_train, y_train, X_test, y_test, dimension, service)
+            start = time.time()
+            svc, backend, quantum_kernel, X_matrix_test = svc_qkernel(computers, X_train, y_train, X_test, y_test, dimension, service)
 
-        # # Compute the kernel matrix for prediction
-        # adhoc_matrix_test = quantum_kernel.evaluate(x_vec=X_test, y_vec=X_train)
+            df_model = metrics_of_evaluation_classicaly(svc, dimension, time.time(), start, X_matrix_test, y_test)
+            df_model["Samples"] = samples  # Add sample size info
 
-        # # Predict using the precomputed kernel matrix
-        # predictions = svc.predict(adhoc_matrix_test)
+            # **Append ONLY the new results to CSV**
+            df_model.to_csv(results_file, mode='a', index=False, header=not file_exists)
 
-        df_model = metrics_of_evaluation_classicaly(svc, dimension, time.time(), start, X_matrix_test, y_test)
+            # **Update file_exists to False to avoid writing header again**
+            file_exists = True  
 
-        df_results = pd.concat([df_results, df_model], ignore_index=True)
-        df_results.to_csv(results_file, index=False)
-
-    return df_results
+    return True
 
 """### SVC + Quantum Kernel"""
-#need to add a loop here
-df_result_qkernel0 = main_svc_qkernel_correlation(0)
-#df_result_qkernel
-print("**********************************************")
-df_result_qkernel1 = main_svc_qkernel_correlation(1)
-#df_result_qkernel
+TOTAL_SAMPLES = X.shape[0]
 
-"""### Quantum Model Training
-
-* Fist is the dataset with highest corelations
-* The problem is that we are doing feature selection based on the best features that are more corelated with our output. But we want to have features that are now as good to our output. Like the best corelated and the least corelated for example
-"""
-
-df_result_qsvc0 = main_qsvc_update_correlation("ibm_brisbane", start_at=12, end_at=28, dataset=0) #9-20
-df_result_qsvc0 = df_result_qsvc.dropna(axis=1)
-#df_result_qsvc
-print("**********************************************")
-df_result_qsvc1 = main_qsvc_update_correlation("ibm_brisbane", start_at=12, end_at=28, dataset=1) #9-20
-df_result_qsvc1 = df_result_qsvc.dropna(axis=1)
-# df_result_qsvc
-
+for i in range(0, 2): # Type of features selection: (High High) vs (High Low)
+    for j in range(1, 11): # Size of dataset: 10%, 20%, ..., 100%
+        samples = int((TOTAL_SAMPLES * j) / 10)   
+        df_result_qkernel0 = main_svc_qkernel_correlation(dataset = i, samples = samples, start_at=2, end_at=11)
+    print("**********************************************")
+    
+"""### Quantum Model Training"""
+for i in range(0, 2): # Type of features selection: (High High) vs (High Low)
+    for j in range(1, 11): # Size of dataset: 10%, 20%, ..., 100%
+        samples = int((TOTAL_SAMPLES * j) / 10)   
+        df_result_qsvc0 = main_qsvc_update_correlation("ibm_brisbane", dataset=i, samples = samples, start_at=2, end_at=11)
+    print("**********************************************")
+    
 """### Classic Model Training:"""
 
-df_result_svc0 = main_svc_correlation(0) #"ibm_brisbane", start_at=2, end_at=20)
-# df_result_svc0
-
-df_result_svc1 = main_svc_correlation(1) #"ibm_brisbane", start_at=2, end_at=20)
-# df_result_svc1
-
-"""## Export answer in external file
-
-ML in classic computer.
-"""
-
-# file_path = "/../results/df_result_classic.csv"
-# df_classic.to_csv(file_path, index=False)
-
-# Copy the original DataFrame
-formatted_df = df_classic.copy()
-
-# Identify the maximum values for the specified columns
-columns_to_bold = ['TP', 'TN', 'Accuracy', 'Precision', 'Sensitivity', 'Specificity', 'F1 Score', 'Elapsed Time (s)']
-max_values = formatted_df[columns_to_bold].max()
-
-# Identify the minimum usage
-usage_column = 'Usage (s)'  # Replace with the actual column name for usage
-min_usage = formatted_df[usage_column].min()
-
-# Round specified columns to 1 decimal place
-columns_to_round = ['TP', 'TN', 'FP', 'FN']
-formatted_df[columns_to_round] = formatted_df[columns_to_round].astype(float).round(1)
-
-# Apply bold formatting to the maximum values
-for col in columns_to_bold:
-    formatted_df[col] = formatted_df[col].apply(lambda x: f"\\textbf{{{x}}}" if x == max_values[col] else x)
-
-# Highlight the minimum usage value
-formatted_df[usage_column] = formatted_df[usage_column].apply(
-    lambda x: f"\\textbf{{{x}}}" if x == min_usage else x
-)
-
-# Generate the LaTeX table
-latex_output = formatted_df.to_latex(
-    index=False,
-    escape=False,
-    caption="Performance analysis of classification models with highlighted maximum values and minimum usage:",
-    label="tab:classification_performance"
-)
-
-# Print the LaTeX table
-print(latex_output)
-
-"""Hipothesis:
-- The results might be different
-- Superconducting qubit with
-
-- Get the time for predicting the test data
-"""
+for i in range(0, 2): # Type of features selection: (High High) vs (High Low)
+    for j in range(1, 11): # Size of dataset: 10%, 20%, ..., 100%
+        samples = int((TOTAL_SAMPLES * j) / 10)  
+        df_result_svc0 = main_svc_correlation(i, samples = samples, start_at=2, end_at=20) #"ibm_brisbane", start_at=2, end_at=20)
+        print("**********************************************")
