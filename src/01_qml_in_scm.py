@@ -580,12 +580,12 @@ def qsvc_with_ibm_hardware(name, X_train, y_train, X_test, y_test, dimension, se
   return qsvc, backend
 
 def main_qsvc_update_correlation(computers='all', dataset=0, samples=500, start_at=0, end_at=20):
-    if dataset == 0:        
+    if dataset == 1:        
         results_file = "qsvc_results_correlation_10_10.csv"
         if should_skip_execution(results_file, samples, end_at):
             return True
         malware = ClaMPDataset(target='class', cut=samples)
-    elif dataset == 1:
+    elif dataset == 0:
         results_file = "qsvc_results_correlation_10_0.csv"
         if should_skip_execution(results_file, samples, end_at):
             return True
