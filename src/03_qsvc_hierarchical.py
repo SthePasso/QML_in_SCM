@@ -39,7 +39,7 @@ class MinimalDataProcessor:
         if dropped:
             print(f"[WARNING] Dropped non-numeric columns: {dropped}")
         return numeric
-        
+
     def stratified_ordered_split(self, X, test_size=0.2, random_state=42):
         """
         Stratified train/test split.
@@ -131,7 +131,8 @@ class MinimalDataProcessor:
         if len(features) <= 1:
             return features
         
-        data = self.df[features]
+        # data = self.df[features]
+        data = self._numeric_data(features)
         correlations = data.corr().abs().fillna(0).clip(0, 1)
         dissimilarity = 1 - correlations
         dissimilarity = (dissimilarity + dissimilarity.T) / 2
@@ -192,7 +193,9 @@ class MinimalDataProcessor:
                 return selected_features[:n_dimensions]
             
             # Need more features - get original clustering data
-            data = self.df.drop(columns=[self.target_col])
+            # data = self.df.drop(columns=[self.target_col])
+            # data = data.loc[:, data.std() > 1e-6]
+            data = self._numeric_data()
             data = data.loc[:, data.std() > 1e-6]
             correlations = data.corr().abs().fillna(0).clip(0, 1)
             dissimilarity = 1 - correlations
@@ -264,7 +267,8 @@ class MinimalDataProcessor:
         if len(features) <= 1:
             return features, [1] * len(features)
         
-        data = self.df[features]
+        # data = self.df[features]
+        data = self._numeric_data(features)
         correlations = data.corr().abs().fillna(0).clip(0, 1)
         dissimilarity = 1 - correlations
         dissimilarity = (dissimilarity + dissimilarity.T) / 2
