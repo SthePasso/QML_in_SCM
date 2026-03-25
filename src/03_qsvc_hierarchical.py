@@ -31,6 +31,15 @@ class MinimalDataProcessor:
         self.y = None          # target Series
         self.list_atributs = [] # ordered representative features (2-D … 10-D)
 
+    def _numeric_data(self, features=None):
+        """Return only numeric columns from self.df (optionally filtered to features)."""
+        df = self.df[features] if features else self.df.drop(columns=[self.target_col])
+        numeric = df.select_dtypes(include=[np.number])
+        dropped = set(df.columns) - set(numeric.columns)
+        if dropped:
+            print(f"[WARNING] Dropped non-numeric columns: {dropped}")
+        return numeric
+        
     def stratified_ordered_split(self, X, test_size=0.2, random_state=42):
         """
         Stratified train/test split.
