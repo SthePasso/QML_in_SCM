@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import squareform
-from s01_0qml_in_scm import calculate_metrics, calculate_metrics_hardware, dataset_path, ClaMPDataset, ClaMPDatasetGPT_, backends, X, time
+from s01_0qml_in_scm import calculate_metrics, calculate_metrics_hardware, dataset_path, ClaMPDataset, ClaMPDatasetGPT, backends, X, time
 
 class MinimalDataProcessor:
     def __init__(self, dataset_path, target_col='class', exclude_cols=None, num_samples=1000):
@@ -603,7 +603,7 @@ def main_qsvc_update_correlation(
         results_file = "qsvc_results_correlation_10_0.csv"
         if should_skip_execution(results_file, samples, end_at):
             return True
-        malware = ClaMPDatasetGPT_(target="class", cut=samples)
+        malware = ClaMPDatasetGPT(target="class", cut=samples)
     else:
         results_file = "qsvc_results_hierarchical.csv"
         if should_skip_execution(results_file, samples, end_at):
