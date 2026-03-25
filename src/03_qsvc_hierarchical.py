@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import squareform
-from s01_0qml_in_scm import calculate_metrics, calculate_metrics_hardware, dataset_path, ClaMPDataset, ClaMPDatasetGPT, backends, X, time
+from s01_0qml_in_scm import calculate_metrics, calculate_metrics_hardware, dataset_path, ClaMPDataset, ClaMPDatasetGPT, backends, X, time, train_test_split
 
 class MinimalDataProcessor:
     def __init__(self, dataset_path, target_col='class', exclude_cols=None, num_samples=1000):
