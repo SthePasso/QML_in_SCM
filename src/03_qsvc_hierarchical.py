@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import squareform
-from s01_0qml_in_scm import calculate_metrics, calculate_metrics_hardware, dataset_path, ClaMPDataset_, ClaMPDatasetGPT_, backends, X, time
+from s01_0qml_in_scm import calculate_metrics, calculate_metrics_hardware, dataset_path, ClaMPDataset, ClaMPDatasetGPT_, backends, X, time
 
 class MinimalDataProcessor:
     def __init__(self, dataset_path, target_col='class', exclude_cols=None, num_samples=1000):
@@ -391,7 +391,7 @@ class MinimalDataProcessor:
 
         list_atributs is set to the 10-D representative list so that
         dataset(n) returns the first n features of that ordered list.
-        This matches the way ClaMPDataset_ / ClaMPDatasetGPT_ behave.
+        This matches the way ClaMPDataset / ClaMPDatasetGPT_ behave.
         """
         if not self.feature_2to10:
             raise RuntimeError("Call generate_feature_clusters() before build_list_atributs().")
@@ -598,7 +598,7 @@ def main_qsvc_update_correlation(
         results_file = "qsvc_results_correlation_10_10.csv"
         if should_skip_execution(results_file, samples, end_at):
             return True
-        malware = ClaMPDataset_(target="class", cut=samples)
+        malware = ClaMPDataset(target="class", cut=samples) #wrong
     elif dataset == 0:
         results_file = "qsvc_results_correlation_10_0.csv"
         if should_skip_execution(results_file, samples, end_at):
