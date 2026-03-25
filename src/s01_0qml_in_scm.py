@@ -783,26 +783,26 @@ def main_svc_qkernel_correlation(dataset=0, samples=500, computers="ibm_brisbane
 
     return True
 
-"""### SVC + Quantum Kernel"""
-TOTAL_SAMPLES = X.shape[0]
-i = 0
-#for i in range(0, 2): # Type of features selection: (High High) vs (High Low)
-for j in range(1, 11): # Size of dataset: 10%, 20%, ..., 100%
-    samples = int((TOTAL_SAMPLES * j) / 10)   
-    df_result_qkernel0 = main_svc_qkernel_correlation(dataset = i, samples = samples, start_at=2, end_at=11)
-print("**********************************************")
+# """### SVC + Quantum Kernel"""
+# TOTAL_SAMPLES = X.shape[0]
+# i = 0
+# #for i in range(0, 2): # Type of features selection: (High High) vs (High Low)
+# for j in range(1, 11): # Size of dataset: 10%, 20%, ..., 100%
+#     samples = int((TOTAL_SAMPLES * j) / 10)   
+#     df_result_qkernel0 = main_svc_qkernel_correlation(dataset = i, samples = samples, start_at=2, end_at=11)
+# print("**********************************************")
     
-"""### Quantum Model Training"""
-#for i in range(0, 2): # Type of features selection: (High High) vs (High Low)
-#    for j in range(1, 11): # Size of dataset: 10%, 20%, ..., 100%
-#        samples = int((TOTAL_SAMPLES * j) / 10)   
-#        df_result_qsvc0 = main_qsvc_update_correlation("ibm_brisbane", dataset=i, samples = samples, start_at=2, end_at=11)
-#    print("**********************************************")
+# """### Quantum Model Training"""
+# #for i in range(0, 2): # Type of features selection: (High High) vs (High Low)
+# #    for j in range(1, 11): # Size of dataset: 10%, 20%, ..., 100%
+# #        samples = int((TOTAL_SAMPLES * j) / 10)   
+# #        df_result_qsvc0 = main_qsvc_update_correlation("ibm_brisbane", dataset=i, samples = samples, start_at=2, end_at=11)
+# #    print("**********************************************")
     
-"""### Classic Model Training:"""
+# """### Classic Model Training:"""
 
-#for i in range(0, 2): # Type of features selection: (High High) vs (High Low)
-#    for j in range(1, 11): # Size of dataset: 10%, 20%, ..., 100%
-#        samples = int((TOTAL_SAMPLES * j) / 10)  
-#        df_result_svc0 = main_svc_correlation(i, samples = samples, start_at=2, end_at=20) #"ibm_brisbane", start_at=2, end_at=20)
-#        print("**********************************************")
+# #for i in range(0, 2): # Type of features selection: (High High) vs (High Low)
+# #    for j in range(1, 11): # Size of dataset: 10%, 20%, ..., 100%
+# #        samples = int((TOTAL_SAMPLES * j) / 10)  
+# #        df_result_svc0 = main_svc_correlation(i, samples = samples, start_at=2, end_at=20) #"ibm_brisbane", start_at=2, end_at=20)
+# #        print("**********************************************")
