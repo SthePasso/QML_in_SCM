@@ -84,11 +84,12 @@ class MinimalDataProcessor:
         return max(scores, key=scores.get)
     
     def generate_feature_clusters(self, min_clusters=2, max_clusters=10):
-        data = self.df.drop(columns=[self.target_col])
+        # data = self.df.drop(columns=[self.target_col])
         
-        # Remove constant features that cause correlation issues
+        # # Remove constant features that cause correlation issues
+        # data = data.loc[:, data.std() > 1e-6]
+        data = self._numeric_data()
         data = data.loc[:, data.std() > 1e-6]
-        
         correlations = data.corr().abs().fillna(0)
         
         # Clip correlations to valid range [0, 1]
