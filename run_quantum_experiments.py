@@ -149,6 +149,14 @@ def load_dataset(dataset_path, target_col="class",
     # Drop columns that are entirely NaN
     df = df.dropna(axis=1, how="all")
 
+    # Drop non-numeric feature columns (e.g. packer_type strings)
+    non_numeric = [c for c in df.columns
+                   if c != target_col and df[c].dtype == object]
+    if non_numeric:
+        log.info(f"Dropping {len(non_numeric)} non-numeric column(s) "
+                 f"at load time: {non_numeric}")
+        df = df.drop(columns=non_numeric)
+
     if num_samples > 0:
         if num_samples % 2 != 0:
             raise ValueError("--samples must be an even number.")
@@ -235,11 +243,30 @@ FEATURE_STRATEGIES = {
 
 
 def clean_df(df, target_col):
-    """Drop all-NaN columns, median-impute the rest. Returns a copy."""
+    """
+    Prepare dataframe for ML:
+      1. Drop columns that are entirely NaN
+      2. Drop non-numeric columns (e.g. string packer labels) — keep target
+      3. Median-impute remaining NaN values
+    Returns a clean copy — does NOT modify the original df.
+    """
     df = df.copy()
+
+    # 1. Drop all-NaN columns
     df = df.dropna(axis=1, how="all")
+
+    # 2. Drop non-numeric feature columns (strings/objects), but keep target
+    non_numeric = [c for c in df.columns
+                   if c != target_col and df[c].dtype == object]
+    if non_numeric:
+        log.info(f"  Dropping {len(non_numeric)} non-numeric column(s): "
+                 f"{non_numeric}")
+        df = df.drop(columns=non_numeric)
+
+    # 3. Median-impute remaining NaNs in feature columns
     num_cols = df.columns.difference([target_col])
     df[num_cols] = df[num_cols].fillna(df[num_cols].median())
+
     return df
 
 
