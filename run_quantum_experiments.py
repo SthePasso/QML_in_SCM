@@ -618,9 +618,9 @@ def parse_args():
     p.add_argument("--exclude_cols", default="e_magic,e_crlc",
                    help="Comma-separated columns to drop "
                         "(default: e_magic,e_crlc)")
-    p.add_argument("--samples", type=int, default=1000,
-                   help="Balanced sample size, 0 = use all data "
-                        "(default: 1000)")
+    p.add_argument("--samples", type=int, default=0,
+                   help="Balanced sample size per class (even number). "
+                        "0 = use the full dataset (default: 0)")
 
     # Experiment scope
     p.add_argument("--model", default="both",
@@ -671,7 +671,7 @@ def main():
     log.info(f"  model        : {args.model}")
     log.info(f"  strategy     : {args.strategy}")
     log.info(f"  dimensions   : {args.dim_min} → {args.dim_max}")
-    log.info(f"  samples      : {args.samples if args.samples > 0 else 'all'}")
+    log.info(f"  samples      : {args.samples if args.samples > 0 else 'all (full dataset)'}")
     log.info(f"  cv folds     : {args.n_splits}")
     log.info(f"  results_dir  : {args.results_dir}")
     log.info(f"  IBM backend  : "
